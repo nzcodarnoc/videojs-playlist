@@ -66,7 +66,26 @@ _V_.PlaylistEngine = _V_.Class.extend({
   updateVideoPoster: function() {
     var newPoster = this.videos[this.currentIndex].poster_url;
     this.player.tag.poster = newPoster;
+  },
+
+  playAll: function() {
+    this.currentIndex = 0;
+    this.playAllNext();
+  },
+
+  playAllNext: function() {
+    this.updateVideo();
+    this.player.load();
+    var that = this;
+    this.player.addEvent("ended", function() {
+	that.player.removeEvent("ended", function() {} );
+	that.currentIndex++;
+	if (that.currentIndex < that.videos.length) {
+	  that.playAllNext();
+	}
+    });
   }
+
 });
 
 _V_.Playlist = _V_.Component.extend({
@@ -167,7 +186,7 @@ _V_.PlaylistThumb = _V_.Component.extend({
   },
 
   createElement: function(){
-    this.el = this._super("img", { src: this.params.thumb_url });
+      this.el = this._super("img", { src: this.params.thumb_url, alt: this.params.sources[0].title, title: this.params.sources[0].title });
     return this.el;
   },
 

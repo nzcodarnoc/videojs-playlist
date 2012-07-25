@@ -11,7 +11,7 @@ _V_.PlaylistEngine = _V_.Class.extend({
       this.updateVideo();
     } else {
       throw new Error("Playlist is empty");
-    };
+    }
   },
 
   pause: function() {
@@ -32,7 +32,9 @@ _V_.PlaylistEngine = _V_.Class.extend({
     this.pause();
     this.player.load();
     var that = this;
-    setTimeout(function() { that.player.play() }, 500);
+    setTimeout(function() {
+      that.player.play()
+    }, 500);
   },
 
   incrementCurrentIndex: function() {
@@ -40,14 +42,14 @@ _V_.PlaylistEngine = _V_.Class.extend({
     // play first video when playlist reaches end
     if (this.currentIndex >= this.videos.length) {
       this.currentIndex = 0;
-    };
+    }
   },
 
   decrementCurrentIndex: function() {
     this.currentIndex--;
     if (this.currentIndex < 0) {
       this.currentIndex = this.videos.length - 1;
-    };
+    }
   },
 
   updateVideo: function() {
@@ -74,18 +76,20 @@ _V_.PlaylistEngine = _V_.Class.extend({
   },
 
   playAllNext: function() {
+    
+    playAllEventHandler = function() {
+      that.player.removeEvent("ended", playAllEventHandler);
+      that.currentIndex++;
+      if (that.currentIndex < that.videos.length) {
+        that.playAllNext();
+      }
+    }
+    
     this.updateVideo();
     this.player.load();
     var that = this;
-    this.player.addEvent("ended", function() {
-	that.player.removeEvent("ended", function() {} );
-	that.currentIndex++;
-	if (that.currentIndex < that.videos.length) {
-	  that.playAllNext();
-	}
-    });
+    this.player.addEvent("ended", playAllEventHandler);
   }
-
 });
 
 _V_.Playlist = _V_.Component.extend({
@@ -100,10 +104,18 @@ _V_.Playlist = _V_.Component.extend({
     this.show();
   },
 
-  play:  function(index) { this.engine.play(index) },
-  pause: function() { this.player.pause() },
-  next:  function() { this.engine.next() },
-  prev:  function() { this.engine.prev() },
+  play:  function(index) {
+    this.engine.play(index)
+  },
+  pause: function() {
+    this.player.pause()
+  },
+  next:  function() {
+    this.engine.next()
+  },
+  prev:  function() {
+    this.engine.prev()
+  },
 
   show: function() {
     this.enableWebkitScrollbar();
@@ -118,14 +130,24 @@ _V_.Playlist = _V_.Component.extend({
     this.videos = this.getVideos();
 
     var id = this.player.el.id +"_playlist";
-    var el = this._super("div", { id: id });
-    this.wrapperEl = this._super("div", { className: "playlist-wrapper" })
+    var el = this._super("div", {
+      id: id
+    });
+    this.wrapperEl = this._super("div", {
+      className: "playlist-wrapper"
+    });
 
-    for (i in this.videos) {
+    for (i in this.videos) 
+    {
       var thumb = new _V_.PlaylistThumb(this.player, this.videos[i], i)
-      this.wrapperEl.appendChild(thumb.el);
-    };
-
+      // In IE7 & 8 there is a bug which passes in params as type "function"
+      // on an unwanted additional final iteration of this loop
+      // We catch this in PlaylistThumb, since it can't (!?) be caught here
+      if (typeof thumb.el == "object") 
+      {
+        this.wrapperEl.appendChild(thumb.el);
+      }
+    }
     // add playlist-wrapper to main playlist tag
     el.appendChild(this.wrapperEl);
     return el;
@@ -143,7 +165,7 @@ _V_.Playlist = _V_.Component.extend({
       var cssClass = "vjs-playlist";
     } else {
       var cssClass = "vjs-playlist webkit-scrollbar";
-    };
+    }
     _V_.addClass(this.el, cssClass);
   },
 
@@ -169,24 +191,33 @@ _V_.Playlist = _V_.Component.extend({
       var val = "-134px";
     } else {
       var val = "-124px";
-    };
+    }
     this.el.style.bottom = val;
     // add extra margin to main tag when many videos are embeded
     this.player.el.style.marginBottom = val.slice(1);
-  },
+  }
 });
 
 _V_.PlaylistThumb = _V_.Component.extend({
   init: function(player, params, index) {
-    this.params = params;
-    this.index = index;
-    this._super(player);
-
-    _V_.addEvent(this.el, "click", _V_.proxy(this, this.onClick));
+    // In IE7 & 8 there is a bug which passes in params as type "function"
+    // on the final iteration of the outer loop
+    if(typeof params == "object")
+    {
+      this.params = params;
+      this.index = index;
+      this._super(player);
+      _V_.addEvent(this.el, "click", _V_.proxy(this, this.onClick));
+    }
   },
 
-  createElement: function(){
-      this.el = this._super("img", { src: this.params.thumb_url, alt: this.params.sources[0].title, title: this.params.sources[0].title });
+  createElement: function(){    
+    // Problem: an extra null element is passed in here in IE7+8
+    this.el = this._super("img", {
+      src: this.params.thumb_url, 
+      alt: this.params.sources[0].title, 
+      title: this.params.sources[0].title
+    });
     return this.el;
   },
 
